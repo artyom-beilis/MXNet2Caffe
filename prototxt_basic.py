@@ -167,14 +167,6 @@ def SoftmaxOutput(txt_file, info):
   txt_file.write('\n')
   pass
 
-def Eltwise(txt_file, info):
-  txt_file.write('layer {\n')
-  txt_file.write('  bottom: "%s"\n'     % info['bottom'][0])
-  txt_file.write('  top: "%s"\n'        % info['top'])
-  txt_file.write('  name: "%s"\n'       % info['top'])
-  txt_file.write('  type: "Eltwise"\n')
-  txt_file.write('}\n')
-  txt_file.write('\n')
 
 def Split(txt_file, info):
   txt_file.write('layer {\n')
@@ -217,7 +209,7 @@ def write_node(txt_file, info,shape):
     elif info['op'] == '_copy':
         Split(txt_file,info)
     elif info['op'] == 'elemwise_add':
-        Eltwise(txt_file,info)
+        ElementWiseSum(txt_file,info)
     else:
         sys.exit("Warning!  Unknown mxnet op:{}".format(info['op']))
 
