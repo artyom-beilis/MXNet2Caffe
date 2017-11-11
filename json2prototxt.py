@@ -6,7 +6,9 @@ from prototxt_basic import *
 parser = argparse.ArgumentParser(description='Convert MXNet jason to Caffe prototxt')
 parser.add_argument('--mx-json',     type=str, default='model_mxnet/residual-symbol.json')
 parser.add_argument('--cf-prototxt', type=str, default='model_caffe/deploy.prototxt')
+parser.add_argument('--shape',type=str)
 args = parser.parse_args()
+shape = tuple([ int(d) for d in args.shape.split(',') ])
 
 with open(args.mx_json) as json_file:    
   jdata = json.load(json_file)
@@ -35,5 +37,5 @@ with open(args.cf_prototxt, "w") as prototxt_file:
           print('           use shared weight -> %s'% str(input_i['name']))
           info['share'] = True
       
-    write_node(prototxt_file, info)
+    write_node(prototxt_file, info, shape)
 

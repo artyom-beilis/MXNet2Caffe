@@ -1,19 +1,23 @@
 # prototxt_basic
 
-def data(txt_file, info):
+import sys
+
+def data(txt_file, info,shape):
+  strshape = 'dim: ' + ' dim: '.join([str(i) for i in shape])
   txt_file.write('name: "mxnet-mdoel"\n')
   txt_file.write('layer {\n')
   txt_file.write('  name: "data"\n')
   txt_file.write('  type: "Input"\n')
   txt_file.write('  top: "data"\n')
   txt_file.write('  input_param {\n')
-  txt_file.write('    shape: { dim: 10 dim: 3 dim: 224 dim: 224 }\n') # TODO
+  txt_file.write('    shape: { %s }\n' % strshape) 
   txt_file.write('  }\n')
   txt_file.write('}\n')
   txt_file.write('\n')
 
 def Convolution(txt_file, info):
-  if info['param']['no_bias'] == 'True':
+  attr = info['attr']
+  if 'no_bias' in attr and attr['no_bias'] == 'True':
     bias_term = 'false'
   else:
     bias_term = 'true'  
@@ -23,12 +27,15 @@ def Convolution(txt_file, info):
   txt_file.write('	name: "%s"\n'         % info['top'])
   txt_file.write('	type: "Convolution"\n')
   txt_file.write('	convolution_param {\n')
-  txt_file.write('		num_output: %s\n'   % info['param']['num_filter'])
-  txt_file.write('		kernel_size: %s\n'  % info['param']['kernel'].split('(')[1].split(',')[0]) # TODO
-  txt_file.write('		pad: %s\n'          % info['param']['pad'].split('(')[1].split(',')[0]) # TODO
-  txt_file.write('		group: %s\n'        % info['param']['num_group'])
-  txt_file.write('		stride: %s\n'       % info['param']['stride'].split('(')[1].split(',')[0])
-  txt_file.write('		bias_term: %s\n'    % bias_term)
+  txt_file.write('		num_output: %s\n'   % attr['num_filter'])
+  txt_file.write('		kernel_size: %s\n'  % attr['kernel'].split('(')[1].split(',')[0]) # TODO
+  if 'pad' in attr:
+      txt_file.write('		pad: %s\n'          % attr['pad'].split('(')[1].split(',')[0]) # TODO
+  #txt_file.write('		group: %s\n'        % attr['num_group'])
+  if 'stride' in attr:
+      txt_file.write('		stride: %s\n'       % attr['stride'].split('(')[1].split(',')[0])
+  if 'bias' in attr:
+      txt_file.write('		bias_term: %s\n'    % bias_term)
   txt_file.write('	}\n')
   if 'share' in info.keys() and info['share']:  
     txt_file.write('	param {\n')
@@ -64,11 +71,17 @@ def BatchNorm(txt_file, info):
   pass
 
 def Activation(txt_file, info):
+  act = info['attr']['act_type']
+  variants = { 'relu' : 'ReLU', 'sigmoid' : 'Sigmoid', 'tanh' : 'TanH' }
+  if act in variants:
+      act = variants[act]
+  else:
+      raise Exception('Unsupported activation ' + act) 
   txt_file.write('layer {\n')
   txt_file.write('  bottom: "%s"\n'       % info['bottom'][0])
   txt_file.write('  top: "%s"\n'          % info['top'])
   txt_file.write('  name: "%s"\n'         % info['top'])
-  txt_file.write('  type: "ReLU"\n')      # TODO
+  txt_file.write('  type: "%s"\n'         % act)    
   txt_file.write('}\n')
   txt_file.write('\n')
   pass
@@ -96,7 +109,8 @@ def ElementWiseSum(txt_file, info):
   pass
 
 def Pooling(txt_file, info):
-  pool_type = 'AVE' if info['param']['pool_type'] == 'avg' else 'MAX'
+  pool_type = 'AVE' if info['attr']['pool_type'] == 'avg' else 'MAX'
+  attr = info['attr']
   txt_file.write('layer {\n')
   txt_file.write('  bottom: "%s"\n'       % info['bottom'][0])
   txt_file.write('  top: "%s"\n'          % info['top'])
@@ -104,9 +118,11 @@ def Pooling(txt_file, info):
   txt_file.write('  type: "Pooling"\n')
   txt_file.write('  pooling_param {\n')
   txt_file.write('    pool: %s\n'         % pool_type)       # TODO
-  txt_file.write('    kernel_size: %s\n'  % info['param']['kernel'].split('(')[1].split(',')[0])
-  txt_file.write('    stride: %s\n'       % info['param']['stride'].split('(')[1].split(',')[0])
-  txt_file.write('    pad: %s\n'          % info['param']['pad'].split('(')[1].split(',')[0])
+  txt_file.write('    kernel_size: %s\n'  % info['attr']['kernel'].split('(')[1].split(',')[0]) #TODO
+  if 'stride' in attr:
+      txt_file.write('    stride: %s\n'       % info['attr']['stride'].split('(')[1].split(',')[0]) #TODO
+  if 'pad' in attr:
+      txt_file.write('    pad: %s\n'          % info['attr']['pad'].split('(')[1].split(',')[0]) #TODO
   txt_file.write('  }\n')
   txt_file.write('}\n')
   txt_file.write('\n')
@@ -114,31 +130,68 @@ def Pooling(txt_file, info):
 
 
 def FullyConnected(txt_file, info):
+  attr = info['attr']
+  if 'no_bias' in attr and attr['no_bias'] == 'True':
+    bias_term = 'false'
+  else:
+    bias_term = 'true'  
   txt_file.write('layer {\n')
   txt_file.write('  bottom: "%s"\n'     % info['bottom'][0])
   txt_file.write('  top: "%s"\n'        % info['top'])
   txt_file.write('  name: "%s"\n'       % info['top'])
   txt_file.write('  type: "InnerProduct"\n')
   txt_file.write('  inner_product_param {\n')
-  txt_file.write('    num_output: %s\n' % info['param']['num_hidden'])
+  txt_file.write('    num_output: %s\n' % info['attr']['num_hidden'])
   txt_file.write('  }\n')
   txt_file.write('}\n')
   txt_file.write('\n')
   pass
 
 def Flatten(txt_file, info):
+  txt_file.write('layer {\n')
+  txt_file.write('  bottom: "%s"\n'     % info['bottom'][0])
+  txt_file.write('  top: "%s"\n'        % info['top'])
+  txt_file.write('  name: "%s"\n'       % info['top'])
+  txt_file.write('  type: "Flatten"\n')
+  txt_file.write('}\n')
+  txt_file.write('\n')
   pass
   
 def SoftmaxOutput(txt_file, info):
+  txt_file.write('layer {\n')
+  txt_file.write('  bottom: "%s"\n'     % info['bottom'][0])
+  txt_file.write('  top: "%s"\n'        % info['top'])
+  txt_file.write('  name: "%s"\n'       % info['top'])
+  txt_file.write('  type: "Softmax"\n')
+  txt_file.write('}\n')
+  txt_file.write('\n')
   pass
+
+def Eltwise(txt_file, info):
+  txt_file.write('layer {\n')
+  txt_file.write('  bottom: "%s"\n'     % info['bottom'][0])
+  txt_file.write('  top: "%s"\n'        % info['top'])
+  txt_file.write('  name: "%s"\n'       % info['top'])
+  txt_file.write('  type: "Eltwise"\n')
+  txt_file.write('}\n')
+  txt_file.write('\n')
+
+def Split(txt_file, info):
+  txt_file.write('layer {\n')
+  txt_file.write('  bottom: "%s"\n'     % info['bottom'][0])
+  txt_file.write('  top: "%s"\n'        % info['top'])
+  txt_file.write('  name: "%s"\n'       % info['top'])
+  txt_file.write('  type: "Split"\n')
+  txt_file.write('}\n')
+  txt_file.write('\n')
 
 
 # ----------------------------------------------------------------
-def write_node(txt_file, info):
+def write_node(txt_file, info,shape):
     if 'label' in info['name']:
         return        
     if info['op'] == 'null' and info['name'] == 'data':
-        data(txt_file, info)
+        data(txt_file, info,shape)
     elif info['op'] == 'Convolution':
         Convolution(txt_file, info)
     elif info['op'] == 'ChannelwiseConvolution':
@@ -161,6 +214,10 @@ def write_node(txt_file, info):
         FullyConnected(txt_file, info)
     elif info['op'] == 'SoftmaxOutput':
         SoftmaxOutput(txt_file, info)
+    elif info['op'] == '_copy':
+        Split(txt_file,info)
+    elif info['op'] == 'elemwise_add':
+        Eltwise(txt_file,info)
     else:
         sys.exit("Warning!  Unknown mxnet op:{}".format(info['op']))
 

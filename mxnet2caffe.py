@@ -4,15 +4,26 @@ import mxnet as mx
 import caffe
 
 parser = argparse.ArgumentParser(description='Convert MXNet model to Caffe model')
+parser.add_argument('--mx-json',    type=str)
 parser.add_argument('--mx-model',    type=str, default='model_mxnet/residual')
-parser.add_argument('--mx-epoch',    type=int, default=0)
 parser.add_argument('--cf-prototxt', type=str, default='model_caffe/deploy.prototxt')
 parser.add_argument('--cf-model',    type=str, default='model_caffe/residual.caffemodel')
+parser.add_argument('--shape',type=str)
 args = parser.parse_args()
+shape = tuple([ int(d) for d in args.shape.split(',') ])
 
 # ------------------------------------------
 # Load
-_, arg_params, aux_params = mx.model.load_checkpoint(args.mx_model, args.mx_epoch)
+mx_sym = mx.symbol.load(args.mx_json)
+mx_net = mx.module.Module(symbol = mx_sym)
+mx_net.bind(for_training=False,data_shapes=[('data', shape)])
+mx_net.load_params(args.mx_model)
+
+
+#_, arg_params, aux_params = mx.model.load_checkpoint(args.mx_model, args.mx_epoch)
+
+arg_params, aux_params = mx_net.get_params()
+
 net = caffe.Net(args.cf_prototxt, caffe.TRAIN)   
 
 # ------------------------------------------
@@ -28,7 +39,7 @@ print('%d KEYS' %len(all_keys))
 print('----------------------------------\n')
 print('VALID KEYS:')
 for i_key,key_i in enumerate(all_keys):
-
+  print i_key,key_i
   try:    
     
     if 'data' is key_i:
